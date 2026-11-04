@@ -1,0 +1,216 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Categoria {
+  id_categoria Int     @id @default(autoincrement())
+  nome         String  @db.VarChar(100)
+  descricao    String? @db.Text
+  ativo        Int?    @default(1) @db.TinyInt
+
+  @@map("categorias")
+}
+
+model Cliente {
+  id_cliente    Int       @id @default(autoincrement())
+  nome          String    @db.VarChar(100)
+  email         String    @unique(map: "email") @db.VarChar(100)
+  contato       String?   @db.VarChar(20)
+  ativo         Int?      @default(1) @db.TinyInt
+  criado_em     DateTime? @default(now()) @db.Timestamp(0)
+  atualizado_em DateTime? @default(now()) @db.Timestamp(0)
+  pedidos       Pedido[]
+
+  @@index([nome], map: "idx_clientes_nome")
+  @@map("clientes")
+}
+
+model Entrada {
+  id_entrada    Int       @id @default(autoincrement())
+  id_produto    Int
+  id_fornecedor Int
+  quantidade    Int
+  valor_unitario Float    @db.Double
+  data_entrada  DateTime? @db.Date
+  observacao    String?   @db.VarChar(200)
+  criado_em     DateTime? @default(now()) @db.Timestamp(0)
+  atualizado_em DateTime? @default(now()) @db.Timestamp(0)
+  produto       Produto   @relation(fields: [id_produto], references: [id_produto], onUpdate: Cascade)
+  fornecedor    Fornecedor @relation(fields: [id_fornecedor], references: [id_fornecedor], onUpdate: Cascade)
+
+  @@index([id_produto], map: "fk_entradas_produtos")
+  @@index([id_fornecedor], map: "fk_entradas_fornecedores")
+  @@map("entradas")
+}
+
+model Estoque {
+  id_estoque     Int     @id @default(autoincrement())
+  id_produto     Int     @unique(map: "id_produto")
+  quantidade     Int
+  estoque_minimo Int?
+  estoque_maximo Int?
+  localizacao    String? @db.VarChar(100)
+  produto        Produto @relation(fields: [id_produto], references: [id_produto])
+
+  @@map("estoque")
+}
+
+model Fornecedor {
+  id_fornecedor Int       @id @default(autoincrement())
+  nome          String    @db.VarChar(100)
+  empresa       String?   @db.VarChar(100)
+  email         String?   @unique(map: "email") @db.VarChar(100)
+  telefone      String?   @db.VarChar(20)
+  cidade        String?   @db.VarChar(50)
+  estado        String?   @db.Char(2)
+  ativo         Int?      @default(1) @db.TinyInt
+  criado_em     DateTime? @default(now()) @db.Timestamp(0)
+  atualizado_em DateTime? @default(now()) @db.Timestamp(0)
+  entradas      Entrada[]
+
+  @@map("fornecedores")
+}
+
+model Funcionario {
+  id_funcionario Int       @id @default(autoincrement())
+  nome           String    @db.VarChar(100)
+  cargo          String    @db.VarChar(50)
+  salario        Float     @db.Double
+  telefone       String?   @db.VarChar(20)
+  email          String?   @db.VarChar(100)
+  data_admissao  DateTime? @db.Date
+  ativo          Int?      @default(1) @db.TinyInt
+  criado_em      DateTime  @default(now()) @db.Timestamp(0)
+  atualizado_em  DateTime  @default(now()) @db.Timestamp(0)
+  saidas         Saida[]
+
+  @@map("funcionarios")
+}
+
+model HistoricoPreco {
+  id_historico Int       @id @default(autoincrement())
+  id_produto   Int?
+  preco        Decimal?  @db.Decimal(10, 2)
+  vigencia     DateTime? @db.Date
+  produto      Produto?  @relation(fields: [id_produto], references: [id_produto])
+
+  @@index([id_produto], map: "id_produto")
+  @@map("historico_precos")
+}
+
+model Log {
+  id_log         Int       @id @default(autoincrement())
+  usuario        String?   @db.VarChar(100)
+  tabela_afetada String?   @db.VarChar(100)
+  acao           String?   @db.VarChar(50)
+  registro       Int?
+  data_hora      DateTime? @db.DateTime(0)
+
+  @@map("logs")
+}
+
+enum TipoMovimentacao {
+  E
+  S
+  A
+  P
+  T
+}
+
+model Movimentacao {
+  id_movimentacao   Int                @id @default(autoincrement())
+  id_produto        Int?
+  tipo              TipoMovimentacao?
+  quantidade        Int?
+  data_movimentacao DateTime?          @db.DateTime(0)
+  observacao        String?            @db.Text
+  produto           Produto?           @relation(fields: [id_produto], references: [id_produto])
+
+  @@index([id_produto], map: "id_produto")
+  @@map("movimentacoes")
+}
+
+model Pedido {
+  id_pedido     Int         @id @default(autoincrement())
+  status        Int?        @default(1) @db.TinyInt
+  data_pedido   DateTime?   @db.Date
+  id_cliente    Int?
+  criado_em     DateTime?   @default(now()) @db.Timestamp(0)
+  atualizado_em DateTime?   @default(now()) @db.Timestamp(0)
+  cliente       Cliente?    @relation(fields: [id_cliente], references: [id_cliente], onDelete: SetNull, onUpdate: Cascade)
+  itens         PedidoItem[]
+
+  @@index([id_cliente], map: "fk_pedidos_clientes")
+  @@index([data_pedido], map: "idx_pedidos_data")
+  @@map("pedidos")
+}
+
+model PedidoItem {
+  id_item        Int       @id @default(autoincrement())
+  id_pedido      Int?
+  id_produto     Int?
+  quantidade     Int?
+  valor_unitario Decimal?  @db.Decimal(10, 2)
+  subtotal       Decimal?  @db.Decimal(10, 2)
+  pedido         Pedido?   @relation(fields: [id_pedido], references: [id_pedido])
+  produto        Produto?  @relation(fields: [id_produto], references: [id_produto])
+
+  @@index([id_pedido], map: "id_pedido")
+  @@index([id_produto], map: "id_produto")
+  @@map("pedido_itens")
+}
+
+model Produto {
+  id_produto     Int             @id @default(autoincrement())
+  nome           String?         @db.VarChar(100)
+  descricao      String          @db.VarChar(200)
+  preco          Decimal?        @db.Decimal(10, 2)
+  imagem_produto String          @db.VarChar(255)
+  criado_em      DateTime?       @default(now()) @db.Timestamp(0)
+  atualizado_em  DateTime?       @default(now()) @db.Timestamp(0)
+  entradas       Entrada[]
+  estoque        Estoque?
+  historico      HistoricoPreco[]
+  movimentacoes  Movimentacao[]
+  itens          PedidoItem[]
+  saidas         Saida[]
+
+  @@index([nome], map: "idx_produto_nome")
+  @@map("produtos")
+}
+
+model Saida {
+  id_saida       Int        @id @default(autoincrement())
+  id_produto     Int
+  id_funcionario Int
+  quantidade     Int
+  valor_unitario Float      @db.Double
+  data_saida     DateTime?  @db.Date
+  destino        String?    @db.VarChar(100)
+  criado_em      DateTime   @default(now()) @db.Timestamp(0)
+  atualizado_em  DateTime   @default(now()) @db.Timestamp(0)
+  produto        Produto    @relation(fields: [id_produto], references: [id_produto], onUpdate: Cascade)
+  funcionario    Funcionario @relation(fields: [id_funcionario], references: [id_funcionario], onUpdate: Cascade)
+
+  @@index([id_produto], map: "fk_saidas_produtos")
+  @@index([id_funcionario], map: "fk_saidas_funcionarios")
+  @@map("saidas")
+}
+
+model Usuario {
+  id_usu        Int       @id @default(autoincrement())
+  nome          String    @db.VarChar(80)
+  email         String    @unique(map: "email") @db.VarChar(100)
+  senha         String    @db.VarChar(255)
+  contato       String?   @db.VarChar(20)
+  genero        String?   @db.Char(1)
+  ativo         Int?      @default(1) @db.TinyInt
+  criado_em     DateTime? @default(now()) @db.Timestamp(0)
+  atualizado_em DateTime? @default(now()) @db.Timestamp(0)
+
+  @@map("usuarios")
+}

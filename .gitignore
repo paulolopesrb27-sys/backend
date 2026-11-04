@@ -22,3 +22,4 @@ yarn-error.log*
 /assets/img
 .env
 paulolopes_loja-oficial.sql
+node_modules

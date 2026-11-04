@@ -1,139 +1,96 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const prisma = require('../database');
+
 const router = express.Router();
-const mysql = require("../mysql").pool;
+const camposPublicos = {
+    id_usu: true,
+    nome: true,
+    email: true,
+    contato: true,
+    genero: true,
+    ativo: true,
+    criado_em: true,
+    atualizado_em: true
+};
+const camposPermitidos = ['nome', 'email', 'senha', 'contato', 'genero', 'ativo'];
 
-// Listar usuários sem expor a senha armazenada.
-router.get('/', (req, res) => {
-    mysql.getConnection((error, conn) => {
-        if (error) return res.status(500).send({ error });
-        conn.query("SELECT id_usu, nome, email, contato, genero, ativo, criado_em, atualizado_em FROM usuarios", (error, resultado) => {
-            conn.release();
-            if (error) return res.status(500).send({ error });
-            res.status(200).send({ usuarios: resultado });
-        });
-    });
-});
-
-router.get('/:id', (req, res, next) => {
-    mysql.getConnection((error, conn) => {
-        if (error) return res.status(500).send({ error: error });
-        conn.query("SELECT id_usu, nome, email, contato, genero, ativo, criado_em, atualizado_em FROM usuarios WHERE id_usu = ?", [req.params.id], (error, resultado) => {
-            conn.release();
-            if (error) return res.status(500).send({ error: error });
-            if (resultado.length === 0) return res.status(404).send({ mensagem: "Usuário não encontrado." });
-            res.status(200).send({ usuario: resultado[0] });
-        });
-    });
-});
-
-
-
-// CADASTRAR USUÁRIO
-router.post('/', async (req, res, next) => {
-    if (typeof req.body.senha !== 'string' || !req.body.senha) {
-        return res.status(400).send({ mensagem: "Informe uma senha válida." });
-    }
-
-    let senhaHash;
+router.get('/', async (req, res) => {
     try {
-        senhaHash = await bcrypt.hash(req.body.senha, 10);
+        const usuarios = await prisma.usuario.findMany({ select: camposPublicos });
+        res.status(200).send({ usuarios });
     } catch (error) {
-        return res.status(500).send({ error });
+        res.status(500).send({ error });
     }
-
-    mysql.getConnection((error, conn) => {
-        if (error) return res.status(500).send({ error: error });
-        conn.query(
-            "INSERT INTO usuarios (nome, email, senha, contato, genero, ativo) VALUES (?, ?, ?, ?, ?, ?)",
-            [req.body.nome, req.body.email, senhaHash, req.body.contato, req.body.genero, req.body.ativo],
-            (error, resultado) => {
-                conn.release();
-                if (error) return res.status(500).send({ error: error });
-                res.status(201).send({
-                    mensagem: "Usuário criado com sucesso!",
-                    id_usuario: resultado.insertId
-                });
-            }
-        );
-    });
 });
 
+router.get('/:id', async (req, res) => {
+    try {
+        const usuario = await prisma.usuario.findUnique({
+            where: { id_usu: Number(req.params.id) },
+            select: camposPublicos
+        });
+        if (!usuario) return res.status(404).send({ mensagem: 'Usuário não encontrado.' });
+        res.status(200).send({ usuario });
+    } catch (error) {
+        res.status(500).send({ error });
+    }
+});
 
+router.post('/', async (req, res) => {
+    if (typeof req.body?.senha !== 'string' || !req.body.senha) {
+        return res.status(400).send({ mensagem: 'Informe uma senha válida.' });
+    }
 
+    try {
+        const senha = await bcrypt.hash(req.body.senha, 10);
+        const dados = Object.fromEntries(
+            camposPermitidos.filter((campo) => campo !== 'senha' && Object.prototype.hasOwnProperty.call(req.body, campo))
+                .map((campo) => [campo, req.body[campo]])
+        );
+        const usuario = await prisma.usuario.create({ data: { ...dados, senha } });
+        res.status(201).send({ mensagem: 'Usuário criado com sucesso!', id_usuario: usuario.id_usu });
+    } catch (error) {
+        res.status(500).send({ error });
+    }
+});
 
-// ATUALIZAR USUÁRIO
-router.patch('/:id', async (req, res, next) => {
-    const camposPermitidos = ['nome', 'email', 'senha', 'contato', 'genero', 'ativo'];
-    const campos = camposPermitidos.filter((campo) => Object.prototype.hasOwnProperty.call(req.body, campo));
-    if (campos.length === 0) return res.status(400).send({ mensagem: "Informe ao menos um campo para atualização." });
+router.patch('/:id', async (req, res) => {
+    const campos = camposPermitidos.filter((campo) => Object.prototype.hasOwnProperty.call(req.body || {}, campo));
+    if (campos.length === 0) return res.status(400).send({ mensagem: 'Informe ao menos um campo para atualização.' });
 
-    const valores = campos.map((campo) => req.body[campo]);
-    const indiceSenha = campos.indexOf('senha');
-    if (indiceSenha !== -1) {
+    const dados = Object.fromEntries(campos.filter((campo) => campo !== 'senha').map((campo) => [campo, req.body[campo]]));
+    if (campos.includes('senha')) {
         if (typeof req.body.senha !== 'string' || !req.body.senha) {
-            return res.status(400).send({ mensagem: "Informe uma senha válida." });
+            return res.status(400).send({ mensagem: 'Informe uma senha válida.' });
         }
         try {
-            valores[indiceSenha] = await bcrypt.hash(req.body.senha, 10);
+            dados.senha = await bcrypt.hash(req.body.senha, 10);
         } catch (error) {
             return res.status(500).send({ error });
         }
     }
 
-    mysql.getConnection((error, conn) => {
-        if (error) return res.status(500).send({ error: error });
-        valores.push(req.params.id);
-        conn.query(
-            `UPDATE usuarios SET ${campos.map((campo) => `${campo} = ?`).join(', ')} WHERE id_usu = ?`,
-            valores,
-            (error, resultado) => {
-                conn.release();
-                if (error) return res.status(500).send({ error: error });
-                if (resultado.affectedRows === 0) return res.status(404).send({ mensagem: "Usuário não encontrado." });
-                res.status(202).send({ mensagem: "Usuário atualizado com sucesso!" });
-            }
-        );
-    });
-});
-
-
-
-
-
-
-
-
-// REMOVER USUÁRIO
-router.delete('/:id', (req, res, next) => {
-    mysql.getConnection((error, conn) => {
-        if (error) return res.status(500).send({ error: error });
-        conn.query("DELETE FROM usuarios WHERE id_usu = ?", [req.params.id], (error, resultado) => {
-            conn.release();
-            if (error) return res.status(500).send({ error: error });
-            if (resultado.affectedRows === 0) return res.status(404).send({ mensagem: "Usuário não encontrado." });
-            res.status(202).send({ mensagem: "Usuário removido com sucesso!" });
+    try {
+        const resultado = await prisma.usuario.updateMany({
+            where: { id_usu: Number(req.params.id) },
+            data: dados
         });
-    });
+        if (resultado.count === 0) return res.status(404).send({ mensagem: 'Usuário não encontrado.' });
+        res.status(202).send({ mensagem: 'Usuário atualizado com sucesso!' });
+    } catch (error) {
+        res.status(500).send({ error });
+    }
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+router.delete('/:id', async (req, res) => {
+    try {
+        const resultado = await prisma.usuario.deleteMany({ where: { id_usu: Number(req.params.id) } });
+        if (resultado.count === 0) return res.status(404).send({ mensagem: 'Usuário não encontrado.' });
+        res.status(202).send({ mensagem: 'Usuário removido com sucesso!' });
+    } catch (error) {
+        res.status(500).send({ error });
+    }
+});
 
 module.exports = router;
-// Solicita uma conexão ao pool, executa a query SQL, libera a conexão para o pool imediatamente após a resposta e trata possíveis erros de execução.
-
-
-
