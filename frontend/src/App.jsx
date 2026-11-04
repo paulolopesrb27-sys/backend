@@ -6,8 +6,10 @@ import {
   Store, Trash2, Truck, Users, X
 } from 'lucide-react';
 
-const configuredApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-const API_URL = `${/^https?:\/\//i.test(configuredApiUrl) ? '' : 'https://'}${configuredApiUrl}`.replace(/\/$/, '');
+const configuredApiUrl = import.meta.env.VITE_API_URL || 'https://backend-wer5.onrender.com';
+const API_URL = import.meta.env.DEV
+  ? '/api'
+  : `${/^https?:\/\//i.test(configuredApiUrl) ? '' : 'https://'}${configuredApiUrl}`.replace(/\/$/, '');
 const SESSION_STORAGE_KEY = 'loja-session';
 
 function readStoredSession() {
@@ -354,7 +356,7 @@ function App() {
   async function saveRecord(values) {
     const resource = resources[dialog.resource];
     const editing = dialog.mode === 'edit';
-    const id = dialog.record[resource.id];
+    const id = editing ? dialog.record[resource.id] : null;
     const result = await request(editing ? `${resource.endpoint}/${id}` : resource.endpoint, {
       method: editing ? 'PATCH' : 'POST', body: JSON.stringify(values)
     });

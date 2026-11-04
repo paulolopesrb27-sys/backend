@@ -71,7 +71,7 @@ Use `npm ci` para instalar as dependências a partir do lockfile; o script `post
 
 ### Endereço público
 
-No Render, o blueprint cria o serviço `loja-api` e o Render atribui a ele um endereço HTTPS público. O endereço concreto depende do serviço criado e não está fixado neste repositório. Consulte a URL exibida na página do serviço `loja-api` no painel do Render; ela será a URL base para as chamadas da API, no formato `https://<domínio-gerado-pelo-render>`. O frontend recebe essa URL por `RENDER_EXTERNAL_URL`. Para conferir a publicação, abra `<URL-base>/health` e espere `{ "status": "ok", "database": "ok" }`.
+URL pública da API informada pelo serviço Render: **https://backend-wer5.onrender.com**. Use-a como URL base para as chamadas. A raiz `/` apresenta a página inicial da API e `/health` verifica a conexão; a resposta esperada de saúde é `{ "status": "ok", "database": "ok" }`. Se o serviço for renomeado ou recriado, confirme a URL vigente no painel Render. A URL pública do frontend é independente e deve ser obtida no serviço estático correspondente.
 
 ## Formato das requisições
 
@@ -182,7 +182,16 @@ Em cada caminho de recurso, os métodos e suas finalidades são:
 | `PATCH /:id` | Atualizar parcialmente um registro existente. |
 | `DELETE /:id` | Excluir um registro. |
 
-Além dos recursos CRUD, `GET /health` verifica a disponibilidade da API e do banco; `POST /login` e `POST /usuario/login` autenticam uma conta. Essas três rotas são públicas. Os métodos de atualização são `PATCH`; não há rota `PUT` implementada.
+Além dos recursos CRUD, as rotas públicas são:
+
+| Método e caminho | Finalidade | Resposta |
+|---|---|---|
+| `GET /` | Exibir a página inicial da API, com links para o frontend e os endpoints públicos. | HTML (`200`). |
+| `GET /health` | Verificar a disponibilidade da API e do banco. | JSON; `200` se o banco responder, `503` em caso de falha. |
+| `POST /login` | Autenticar uma conta pelo e-mail e senha. | JSON com dados públicos do usuário e JWT, ou erro JSON. |
+| `POST /usuario/login` | Alias de `/login`. | Mesmo formato de `/login`. |
+
+Os métodos de atualização dos recursos são `PATCH`; não há rota `PUT` implementada.
 
 Chaves usadas em `GET`, `PATCH` e `DELETE` por ID:
 
