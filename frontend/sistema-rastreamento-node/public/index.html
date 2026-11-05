@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Rastreio Incrível do Paulo</title>
+  
+  <!-- Fontes Google (Inter) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+
+  <!-- Estilos Customizados -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Barra de Navegação -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+          <line x1="12" y1="22.08" x2="12" y2="12"></line>
+        </svg>
+        <div class="brand-text">
+          <h1>Rastreio Incrível do Paulo</h1>
+          <span>Pedidos e entregas</span>
+        </div>
+      </div>
+      <div class="nav-badge">
+        <span class="pulse-indicator"></span>
+        API Online
+      </div>
+    </div>
+  </header>
+
+  <!-- Conteúdo Principal -->
+  <main class="main-container">
+    
+    <!-- Seção de Busca -->
+    <section class="search-section card">
+      <h2>Consultar Objeto</h2>
+      <p>Digite o código de rastreamento de 11 caracteres para consultar o pedido e seus produtos.</p>
+
+      <form id="search-form" class="search-form">
+        <div class="input-group">
+          <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input 
+            type="text" 
+            id="tracking-input" 
+            placeholder="Ex: RSPBC2ED0BC" 
+            maxlength="20"
+            required
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <button type="submit" id="btn-search" class="btn btn-primary">
+            <span>Rastrear</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </div>
+      </form>
+
+      <!-- Exemplos rápidos para teste -->
+      <div class="quick-examples">
+        <span class="examples-label">Códigos disponíveis:</span>
+        <div id="tracking-codes" class="tracking-codes"></div>
+      </div>
+
+      <!-- Alerta de Notificação / Erro -->
+      <div id="alert-message" class="alert hidden"></div>
+    </section>
+
+    <!-- Detalhes do pedido -->
+    <div class="dashboard-grid">
+
+      <!-- Coluna da Esquerda: Informações da Encomenda -->
+      <div class="details-column">
+        
+        <!-- Estado Inicial Vazio -->
+        <div id="empty-state" class="card empty-state">
+          <div class="empty-icon-wrapper">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <h3>Nenhuma consulta realizada</h3>
+          <p>Informe um código de rastreio acima para consultar o cliente, o pedido e os produtos vinculados.</p>
+        </div>
+
+        <!-- Card de Informações da Entrega (oculto inicialmente) -->
+        <div id="tracking-card" class="card tracking-card hidden">
+          <div class="card-header">
+            <div>
+              <span class="tracking-label">CÓDIGO DE RASTREIO</span>
+              <h3 id="display-code" class="display-code">-</h3>
+            </div>
+            <span id="status-badge" class="badge">Em trânsito</span>
+          </div>
+
+          <!-- Ação de Download do Comprovante PDF -->
+          <div class="pdf-action-box">
+            <div class="pdf-info">
+              <svg class="pdf-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              <div>
+                <strong>Comprovante Oficial</strong>
+                  <p>Comprovante com dados do pedido e do cliente</p>
+              </div>
+            </div>
+            <a id="btn-download-pdf" href="#" target="_blank" class="btn btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Baixar PDF</span>
+            </a>
+          </div>
+
+          <!-- Metadados da Entrega -->
+          <div class="metadata-grid">
+            <div class="meta-item">
+              <span class="meta-title">Destinatário</span>
+              <span id="display-destinatario" class="meta-value">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">Última Atualização</span>
+              <span id="display-atualizacao" class="meta-value">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">Pedido</span>
+              <span id="display-order" class="meta-value">-</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-title">Data do pedido</span>
+              <span id="display-order-date" class="meta-value">-</span>
+            </div>
+            <div class="meta-item full-width">
+              <span class="meta-title">Endereço de entrega</span>
+              <span id="display-address" class="meta-value">-</span>
+            </div>
+          </div>
+
+          <div class="timeline-container">
+            <h4>Produtos do pedido</h4>
+            <div id="products-list" class="timeline"></div>
+          </div>
+
+          <!-- Histórico / Timeline -->
+          <div class="timeline-container">
+            <h4>Histórico de Movimentações</h4>
+            <div id="timeline-list" class="timeline">
+              <!-- Inserido dinamicamente via JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-column">
+        <section class="card map-card">
+          <div class="map-header">
+            <h3>Mapa de entrega</h3>
+            <span class="map-subtitle">Araguaína - TO · área aproximada</span>
+          </div>
+          <div id="map" class="map-container" aria-label="Mapa aproximado de Araguaína, Tocantins"></div>
+        </section>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <!-- Lógica da Aplicação -->
+  <script src="app.js"></script>
+</body>
+</html>

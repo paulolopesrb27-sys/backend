@@ -1,0 +1,15 @@
+{
+  "name": "sistema-rastreio-paulo-node",
+  "version": "1.0.0",
+  "description": "Sistema de Rastreio Incrível do Paulo em Node.js com Leaflet e PDFKit",
+  "main": "server.js",
+  "scripts": {
+    "start": "node start.js",
+    "dev": "node --watch start.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "pdfkit": "^0.15.0"
+  }
+}

@@ -143,10 +143,28 @@ model Pedido {
   atualizado_em DateTime?   @default(now()) @db.Timestamp(0)
   cliente       Cliente?    @relation(fields: [id_cliente], references: [id_cliente], onDelete: SetNull, onUpdate: Cascade)
   itens         PedidoItem[]
+  rastreamento  Rastreamento?
 
   @@index([id_cliente], map: "fk_pedidos_clientes")
   @@index([data_pedido], map: "idx_pedidos_data")
   @@map("pedidos")
+}
+
+model Rastreamento {
+  id_rastreamento Int      @id @default(autoincrement())
+  codigo_rastreio String   @unique(map: "uq_rastreamentos_codigo") @db.VarChar(32)
+  id_pedido       Int      @unique(map: "uq_rastreamentos_pedido")
+  status          String   @default("Pedido recebido") @db.VarChar(40)
+  destinatario_nome String? @db.VarChar(100)
+  endereco        String?  @db.VarChar(180)
+  bairro          String?  @db.VarChar(80)
+  cidade          String   @default("Araguaína") @db.VarChar(80)
+  estado          String   @default("TO") @db.Char(2)
+  criado_em       DateTime @default(now()) @db.Timestamp(0)
+  atualizado_em   DateTime @updatedAt @db.Timestamp(0)
+  pedido          Pedido   @relation(fields: [id_pedido], references: [id_pedido], onDelete: Cascade, onUpdate: Cascade)
+
+  @@map("rastreamentos")
 }
 
 model PedidoItem {
