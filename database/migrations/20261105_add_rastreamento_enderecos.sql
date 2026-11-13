@@ -1,0 +1,5 @@
+ALTER TABLE `rastreamentos`
+  ADD COLUMN `endereco` VARCHAR(180) NULL,
+  ADD COLUMN `bairro` VARCHAR(80) NULL,
+  ADD COLUMN `cidade` VARCHAR(80) NOT NULL DEFAULT 'Araguaína',
+  ADD COLUMN `estado` CHAR(2) NOT NULL DEFAULT 'TO';
